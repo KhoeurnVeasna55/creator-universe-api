@@ -259,6 +259,7 @@ router.get(
  *                 currency: "USD"
  *                 price: 12.99
  *                 stock: 120
+ *                 sisActive: true 
  *                 isActive: true
  *             variants:
  *               value:
@@ -273,6 +274,7 @@ router.get(
  *                     price: 19.99
  *                     salePrice: 17.99
  *                     stock: 25
+ *                     isActive: true 
  *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/m-black.png"
  *                     values:
  *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 10 }
