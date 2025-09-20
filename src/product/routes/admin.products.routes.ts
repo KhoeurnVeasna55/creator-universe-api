@@ -82,6 +82,7 @@ const controller = new AdminProductController();
  *         stock: { type: integer }
  *         imageUrl: { type: string, format: uri, nullable: true }
  *         barcode: { type: string, nullable: true }
+ *         isActive: { type: boolean, default: true}
  *       required: [price, values, stock]
  *
  *     ResolvedVariant:
@@ -95,6 +96,7 @@ const controller = new AdminProductController();
  *         stock: { type: integer }
  *         imageUrl: { type: string, format: uri, nullable: true }
  *         barcode: { type: string, nullable: true }
+ *         isActive: { type: boolean }
  *         effectivePrice: { type: number, nullable: true }
  *         discountPercent: { type: integer }
  *         attributesResolved:

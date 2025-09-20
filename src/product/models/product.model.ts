@@ -33,6 +33,8 @@ export interface IVariant extends Document {
   stock: number;                         // required
   imageUrl?: string;
   barcode?: string;
+  isActive: boolean;   
+
 }
 
 const VariantValueSchema = new Schema<IVariantValue>(
@@ -77,6 +79,8 @@ const VariantSchema = new Schema<IVariant>(
       validate: { validator: (v: string) => !v || urlValidator(v), message: "imageUrl must be valid http(s) URL" },
     },
     barcode: { type: String, trim: true },
+    isActive: { type: Boolean, default: true },
+
   },
   { _id: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -125,7 +129,7 @@ export interface IProduct extends Document {
 const ProductSchema = new Schema<IProduct>(
   {
     title: { type: String, required: true, trim: true },
-    slug:  { type: String, required: true, unique: true, lowercase: true, trim: true },
+    slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
     description: { type: String, trim: true },
     brand: { type: String, trim: true },
     category: { type: Schema.Types.ObjectId, ref: "Category" },

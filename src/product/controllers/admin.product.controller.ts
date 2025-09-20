@@ -176,7 +176,7 @@ export class AdminProductController {
           const values = valueIds.map((vid: string) =>
             valByAttrId.get(pair.attributeId)?.get(vid) ?? { _id: vid, label: null, value: null, meta: null }
           );
-        return {
+          return {
             attribute: attrInfo,
             values,
             stock: pair.stock ?? null,
@@ -257,10 +257,10 @@ export class AdminProductController {
           (product as any).category = undefined;
         }
       }
-
       if (typeof body.variants !== "undefined") {
         product.variants = body.variants; // full replacement
       }
+
 
       await product.save();
       return res.json(product);
