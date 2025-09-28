@@ -259,7 +259,7 @@ router.get(
  *                 currency: "USD"
  *                 price: 12.99
  *                 stock: 120
- *                 sisActive: true 
+ *                 isActive: true 
  *                 isActive: true
  *             variants:
  *               value:

@@ -277,20 +277,28 @@ export class AdminProductController {
   bulkDelete = async (req: Request, res: Response) => {
     try {
       const { ids } = req.body as { ids?: string[] };
+
       if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ message: "Body must include non-empty 'ids' array of ObjectId strings" });
+        return res.status(400).json({ message: "Body must include non-empty 'ids' array" });
       }
-      const validIds = ids.filter(isHex24);
-      if (validIds.length === 0) {
-        return res.status(400).json({ message: "No valid 24-hex ids provided" });
+
+      const parsedIds = ids.map(id =>
+        mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
+      );
+
+      const result = await Product.deleteMany({ _id: { $in: parsedIds } });
+
+      if (!result.deletedCount) {
+        return res.status(404).json({ message: "Product not found", ids: parsedIds });
       }
-      const result = await Product.deleteMany({ _id: { $in: validIds } });
-      return res.json({ deletedCount: result.deletedCount ?? 0, ids: validIds });
+
+      return res.json({ deletedCount: result.deletedCount, ids: parsedIds });
     } catch (err) {
       console.error("Admin bulk delete products error:", err);
       return res.status(500).json({ message: "Failed to delete products" });
     }
   };
+
 }
 
 export default AdminProductController;
