@@ -282,6 +282,7 @@ export class AdminProductController {
         return res.status(400).json({ message: "Body must include non-empty 'ids' array" });
       }
 
+      // Convert each ID: if it's a valid ObjectId, wrap it, otherwise keep string
       const parsedIds = ids.map(id =>
         mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
       );
@@ -298,6 +299,7 @@ export class AdminProductController {
       return res.status(500).json({ message: "Failed to delete products" });
     }
   };
+
 
 }
 
