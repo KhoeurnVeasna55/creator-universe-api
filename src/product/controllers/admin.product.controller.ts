@@ -400,7 +400,10 @@ export class AdminProductController {
       }
 
       await product.save();
-      return res.json(product);
+      return res.json({
+        message: "Product updated",
+        status: "ok",
+      });
     } catch (err: any) {
       if (err?.code === 11000) {
         return res.status(409).json({ message: "Duplicate slug or unique field" });
@@ -428,7 +431,8 @@ export class AdminProductController {
       const result = await Product.deleteMany({ _id: { $in: objectIds } });
 
       return res.json({
-        requested: validIds,
+        status: "ok",
+        message: `Deleted ${result.deletedCount ?? 0} products`,
         deletedCount: result.deletedCount ?? 0,
       });
     } catch (err) {
