@@ -282,12 +282,20 @@ export class AdminProductController {
         return res.status(400).json({ message: "Body must include non-empty 'ids' array" });
       }
 
-      // Convert each ID: if it's a valid ObjectId, wrap it, otherwise keep string
+      // Convert valid ObjectIds to ObjectId, keep others as string
       const parsedIds = ids.map(id =>
         mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id
       );
 
-      const result = await Product.deleteMany({ _id: { $in: parsedIds } });
+      console.log("🗑 Deleting IDs:", ids);
+      console.log("🗑 Parsed IDs:", parsedIds);
+
+      const result = await Product.deleteMany({
+        $or: [
+          { _id: { $in: parsedIds } },
+          { id: { $in: ids } }
+        ]
+      });
 
       if (!result.deletedCount) {
         return res.status(404).json({ message: "Product not found", ids: parsedIds });
@@ -299,6 +307,7 @@ export class AdminProductController {
       return res.status(500).json({ message: "Failed to delete products" });
     }
   };
+
 
 
 }
