@@ -1,18 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 // src/modules/products/routes/mobile.products.routes.ts
-import { Router } from "express";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { MobileProductController } from "../controllers/mobile.product.controller";
-
-const router = Router();
-const controller = new MobileProductController();
-
+const express_1 = require("express");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const mobile_product_controller_1 = require("../controllers/mobile.product.controller");
+const router = (0, express_1.Router)();
+const controller = new mobile_product_controller_1.MobileProductController();
 /**
  * @swagger
  * tags:
  *   name: MobileProducts
  *   description: Lightweight public endpoints for mobile apps
  */
-
 /**
  * @swagger
  * components:
@@ -140,7 +139,6 @@ const controller = new MobileProductController();
  *         - totalStock
  *         - variants
  */
-
 /**
  * @swagger
  * /api/mobile/products:
@@ -185,13 +183,9 @@ const controller = new MobileProductController();
  *                 total: { type: integer, example: 120 }
  *                 pages: { type: integer, example: 10 }
  */
-router.get(
-  "/",
-  asyncHandler(async (req, res) => {
+router.get("/", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.list(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/mobile/products/{idOrSlug}:
@@ -212,12 +206,8 @@ router.get(
  *               $ref: '#/components/schemas/MobileProductDetail'
  *       404: { description: Not found }
  */
-router.get(
-  "/:idOrSlug",
-  asyncHandler(async (req, res) => {
+router.get("/:idOrSlug", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.getOne(req, res);
-  })
-);
+}));
 console.log("Loaded routes in mobile.product.routes:", router.stack.map(r => r.route?.path));
-
-export default router;
+exports.default = router;

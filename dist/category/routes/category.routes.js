@@ -1,13 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 // src/category/routes/category.routes.ts
-import { Router } from "express";
-import { authenticate } from "../../middlewares/auth";
-import { authorizeRoles } from "../../middlewares/authorizeRoles";
-import { CategoryController } from "../controllers/category.controller";
-import { asyncHandler } from "../../utils/asyncHandler";
-
-const router = Router();
-const controller = new CategoryController();
-
+const express_1 = require("express");
+const auth_1 = require("../../middlewares/auth");
+const authorizeRoles_1 = require("../../middlewares/authorizeRoles");
+const category_controller_1 = require("../controllers/category.controller");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const router = (0, express_1.Router)();
+const controller = new category_controller_1.CategoryController();
 /**
  * @swagger
  * tags:
@@ -55,7 +55,6 @@ const controller = new CategoryController();
  *         total: { type: integer, example: 27 }
  *         pages: { type: integer, example: 3 }
  */
-
 /**
  * @swagger
  * /api/categories:
@@ -86,10 +85,9 @@ const controller = new CategoryController();
  *       409:
  *         description: Duplicate name or slug
  */
-router.post("/", authenticate, authorizeRoles("admin"), asyncHandler(async (req, res) => {
-  await controller.create(req, res);
+router.post("/", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.create(req, res);
 }));
-
 /**
  * @swagger
  * /api/categories:
@@ -117,8 +115,7 @@ router.post("/", authenticate, authorizeRoles("admin"), asyncHandler(async (req,
  *             schema:
  *               $ref: '#/components/schemas/PaginatedCategories'
  */
-router.get("/", asyncHandler(controller.list));
-
+router.get("/", (0, asyncHandler_1.asyncHandler)(controller.list));
 /**
  * @swagger
  * /api/categories/{idOrSlug}:
@@ -140,10 +137,9 @@ router.get("/", asyncHandler(controller.list));
  *       404:
  *         description: Not found
  */
-router.get("/:idOrSlug", asyncHandler(async (req, res) => {
-  await controller.getOne(req, res);
+router.get("/:idOrSlug", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.getOne(req, res);
 }));
-
 /**
  * @swagger
  * /api/categories/{id}:
@@ -179,10 +175,9 @@ router.get("/:idOrSlug", asyncHandler(async (req, res) => {
  *       409:
  *         description: Duplicate name or slug
  */
-router.put("/:id", authenticate, authorizeRoles("admin"), asyncHandler(async (req, res) => {
-  await controller.update(req, res);
+router.put("/:id", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.update(req, res);
 }));
-
 /**
  * @swagger
  * /api/categories/bulk-delete:
@@ -212,19 +207,10 @@ router.put("/:id", authenticate, authorizeRoles("admin"), asyncHandler(async (re
  *       403:
  *         description: Forbidden
  */
-router.post(
-  "/bulk-delete",
-  authenticate,
-  authorizeRoles("admin"),
-  asyncHandler(async (req, res) => {
+router.post("/bulk-delete", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.removeBulk(req, res);
-  })
-);
-
-
-
-
-router.post("/status", authenticate, authorizeRoles("admin"), asyncHandler(async (req, res) => {
-  await controller.updateStatus(req, res); // <-- never reached
 }));
-export default router;
+router.post("/status", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.updateStatus(req, res); // <-- never reached
+}));
+exports.default = router;

@@ -6,14 +6,17 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path'; // Add this import
 import { errorHandler, notFound } from './middlewares/error.middleware';
+// Corrected imports
 import categoryRoutes from "./category/routes/category.routes";
 import bannerRoutes from "./banner/routes/banner.routes";
-import authRoutes from './auth/routes/auth.routes';
-import userRoutes from './user/routes/user.routes';
+import authRoutes from "./auth/routes/auth.routes";
+import userRoutes from "./user/routes/user.routes";
 import mobileProductsRouter from "./product/routes/mobile.products.routes";
-import adminProductsRouter from "./product/routes/admin.products.routes"
-import attributeRoutes  from "./attribute/routes/admin.attribute.routes";
+import adminProductsRouter from "./product/routes/admin.products.routes";
+import attributeRoutes from "./attribute/routes/admin.attribute.routes";
 import uploadRoutes from "./upload/routes/upload.routes";
+
+
 import { apiLimiter } from './middlewares/rateLimit';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
@@ -49,7 +52,7 @@ const corsOptions = {
   origin: function (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
     // Allow requests with no origin (like mobile apps, Postman)
     if (!origin) return callback(null, true);
-    
+
     // List of allowed origins
     const allowedOrigins = [
       'http://localhost:3000',
@@ -91,7 +94,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // ✅ Handle preflight requests
-app.options('*', cors(corsOptions));
+// app.options('*', cors(corsOptions));
 
 // ✅ Helmet configuration (allow images from your domain)
 app.use(helmet({
@@ -109,10 +112,8 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' })); // Increase limit for image uploads
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ Serve static files (IMPORTANT: Add this for image serving)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Swagger setup
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use(
   "/api-docs",
@@ -149,7 +150,11 @@ app.use("/api/banners", bannerRoutes);
 app.use("/api/mobile/products", mobileProductsRouter);
 app.use("/api/admin/products", adminProductsRouter);
 app.use("/api/uploads", uploadRoutes);
-app.use("/api/attributes",attributeRoutes);
+app.use("/api/attributes", attributeRoutes);
+
+console.log("mobileProductsRouter:", mobileProductsRouter);
+console.log("adminProductsRouter:", adminProductsRouter);
+console.log("attributeRoutes:", attributeRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

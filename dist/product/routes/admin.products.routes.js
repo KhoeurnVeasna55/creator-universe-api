@@ -1,19 +1,18 @@
-import { Router } from "express";
-import { authenticate } from "../../middlewares/auth";
-import { authorizeRoles } from "../../middlewares/authorizeRoles";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { AdminProductController } from "../controllers/admin.product.controller";
-
-const router = Router();
-const controller = new AdminProductController();
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middlewares/auth");
+const authorizeRoles_1 = require("../../middlewares/authorizeRoles");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const admin_product_controller_1 = require("../controllers/admin.product.controller");
+const router = (0, express_1.Router)();
+const controller = new admin_product_controller_1.AdminProductController();
 /**
  * @swagger
  * tags:
  *   name: AdminProducts
  *   description: Admin-only product management
  */
-
 /**
  * @swagger
  * components:
@@ -172,7 +171,6 @@ const controller = new AdminProductController();
  *         - createdAt
  *         - updatedAt
  */
-
 /**
  * @swagger
  * /api/admin/products:
@@ -228,15 +226,9 @@ const controller = new AdminProductController();
  *                 total: { type: integer, example: 120 }
  *                 pages: { type: integer, example: 10 }
  */
-router.get(
-    "/",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.list(req, res);
-    })
-);
-
+router.get("/", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.list(req, res);
+}));
 /**
  * @swagger
  * /api/admin/products:
@@ -259,7 +251,7 @@ router.get(
  *                 currency: "USD"
  *                 price: 12.99
  *                 stock: 120
- *                 isActive: true 
+ *                 isActive: true
  *             variants:
  *               value:
  *                 title: "Premium Crewneck Tee"
@@ -273,7 +265,7 @@ router.get(
  *                     price: 19.99
  *                     salePrice: 17.99
  *                     stock: 25
- *                     isActive: true 
+ *                     isActive: true
  *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/m-black.png"
  *                     values:
  *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 10 }
@@ -285,15 +277,9 @@ router.get(
  *       403: { description: Forbidden }
  *       409: { description: Duplicate slug }
  */
-router.post(
-    "/",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.create(req, res);
-    })
-);
-
+router.post("/", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.create(req, res);
+}));
 /**
  * @swagger
  * /api/admin/products/{idOrSlug}:
@@ -316,15 +302,9 @@ router.post(
  *               $ref: '#/components/schemas/AdminProductFlat'
  *       404: { description: Not found }
  */
-router.get(
-    "/:idOrSlug",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.getOne(req, res);
-    })
-);
-
+router.get("/:idOrSlug", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.getOne(req, res);
+}));
 /**
  * @swagger
  * /api/admin/products/{idOrSlug}:
@@ -357,14 +337,9 @@ router.get(
  *       200: { description: Updated }
  *       404: { description: Not found }
  */
-router.post(
-    "/:idOrSlug",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.update(req, res);
-    })
-);
+router.post("/:idOrSlug", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.update(req, res);
+}));
 /**
  * @swagger
  * /api/admin/products/delete:
@@ -416,15 +391,8 @@ router.post(
  *       403:
  *         description: Forbidden (not an admin)
  */
-router.post(
-    "/delete",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.bulkDelete(req, res);
-    })
-);
-
+router.post("/delete", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.bulkDelete(req, res);
+}));
 console.log("Loaded routes in admin.products.routes:", router.stack.map(r => r.route?.path));
-
-export default router;
+exports.default = router;

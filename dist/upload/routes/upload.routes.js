@@ -1,20 +1,19 @@
-import { Router } from "express";
-import { authenticate } from "../../middlewares/auth";
-import { authorizeRoles } from "../../middlewares/authorizeRoles";
-import { upload } from "../../middlewares/upload.middleware";
-import { UploadController } from "../controllers/upload.controller";
-import { asyncHandler } from "../../utils/asyncHandler";
-
-const router = Router();
-const controller = new UploadController();
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_1 = require("../../middlewares/auth");
+const authorizeRoles_1 = require("../../middlewares/authorizeRoles");
+const upload_middleware_1 = require("../../middlewares/upload.middleware");
+const upload_controller_1 = require("../controllers/upload.controller");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const router = (0, express_1.Router)();
+const controller = new upload_controller_1.UploadController();
 /**
  * @swagger
  * tags:
  *   name: Uploads
  *   description: Cloudinary uploads
  */
-
 /**
  * @swagger
  * /api/uploads:
@@ -51,15 +50,11 @@ const controller = new UploadController();
  *       401:
  *         description: Unauthorized
  */
-router.post(
-    "/",
-    // authenticate,
-    upload.single("file"),
-    asyncHandler(async (req, res) => {
-        await controller.uploadSingle(req, res);
-    }
-    ));
-
+router.post("/", 
+// authenticate,
+upload_middleware_1.upload.single("file"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.uploadSingle(req, res);
+}));
 /**
  * @swagger
  * /api/uploads/many:
@@ -95,15 +90,9 @@ router.post(
  *       401:
  *         description: Unauthorized
  */
-router.post(
-    "/many",
-    authenticate,
-    upload.array("files", 10),
-    asyncHandler(async (req, res) => {
-        await controller.uploadMany(req, res);
-    }
-    ));
-
+router.post("/many", auth_1.authenticate, upload_middleware_1.upload.array("files", 10), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.uploadMany(req, res);
+}));
 /**
  * @swagger
  * /api/uploads/{publicId}:
@@ -131,14 +120,7 @@ router.post(
  *       404:
  *         description: Not found
  */
-router.delete(
-    "/:publicId",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.deleteOne(req, res);
-    })
-);
-
-
-export default router;
+router.delete("/:publicId", auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+    await controller.deleteOne(req, res);
+}));
+exports.default = router;

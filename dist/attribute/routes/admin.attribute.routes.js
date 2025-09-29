@@ -1,16 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 // src/api/routes/admin.attribute.routes.ts
-import { Router } from "express";
-import { authenticate } from "../../middlewares/auth";
-import { authorizeRoles } from "../../middlewares/authorizeRoles";
-import { asyncHandler } from "../../utils/asyncHandler";
-import { AttributeController } from "../controllers/attribute.controller";
-
-const router = Router();
-const controller = new AttributeController();
-
+const express_1 = require("express");
+const auth_1 = require("../../middlewares/auth");
+const authorizeRoles_1 = require("../../middlewares/authorizeRoles");
+const asyncHandler_1 = require("../../utils/asyncHandler");
+const attribute_controller_1 = require("../controllers/attribute.controller");
+const router = (0, express_1.Router)();
+const controller = new attribute_controller_1.AttributeController();
 // All endpoints require admin
-router.use(authenticate, authorizeRoles("admin"));
-
+router.use(auth_1.authenticate, (0, authorizeRoles_1.authorizeRoles)("admin"));
 /**
  * @swagger
  * tags:
@@ -126,7 +125,6 @@ router.use(authenticate, authorizeRoles("admin"));
  *       properties:
  *         message: { type: string, example: "Attribute deleted successfully" }
  */
-
 /**
  * @swagger
  * /api/attributes:
@@ -157,13 +155,9 @@ router.use(authenticate, authorizeRoles("admin"));
  *       409:
  *         description: Duplicate code
  */
-router.post(
-  "/",
-  asyncHandler(async (req, res) => {
+router.post("/", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.create(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/attributes:
@@ -210,13 +204,9 @@ router.post(
  *       403:
  *         description: Forbidden
  */
-router.get(
-  "/",
-  asyncHandler(async (req, res) => {
+router.get("/", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.list(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/attributes/{idOrCode}:
@@ -244,13 +234,9 @@ router.get(
  *       404:
  *         description: Not found
  */
-router.get(
-  "/:idOrCode",
-  asyncHandler(async (req, res) => {
+router.get("/:idOrCode", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.getOne(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/attributes/{idOrCode}:
@@ -289,14 +275,9 @@ router.get(
  *       409:
  *         description: Duplicate code
  */
-router.put(
-  "/:idOrCode",
-  asyncHandler(async (req, res) => {
+router.put("/:idOrCode", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.update(req, res); // ✅ use update
-  })
-);
-
-
+}));
 /**
  * @swagger
  * /api/attributes/remove-many:
@@ -337,13 +318,10 @@ router.put(
  *       404:
  *         description: No attributes found to delete
  */
-router.post(
-  "/:idOrCode/values/remove-many",  // ✅ Move this BEFORE the :valueId route
-  asyncHandler(async (req, res) => {
+router.post("/:idOrCode/values/remove-many", // ✅ Move this BEFORE the :valueId route
+(0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.removeManyValues(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/attributes/{idOrCode}/values:
@@ -386,13 +364,9 @@ router.post(
  *       404:
  *         description: Attribute not found
  */
-router.post(
-  "/:idOrCode/values",
-  asyncHandler(async (req, res) => {
+router.post("/:idOrCode/values", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.addValue(req, res);
-  })
-);
-
+}));
 /**
  * @swagger
  * /api/attributes/{idOrCode}/values/{valueId}:
@@ -439,15 +413,10 @@ router.post(
  *       404:
  *         description: Attribute or value not found
  */
-router.put(
-  "/:idOrCode/values/:valueId",  // ✅ This should come AFTER specific routes
-  asyncHandler(async (req, res) => {
+router.put("/:idOrCode/values/:valueId", // ✅ This should come AFTER specific routes
+(0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.updateValue(req, res);
-  })
-);
-
-
-
+}));
 /**
  * @swagger
  * /api/attributes/{idOrCode}/values/remove-many:
@@ -496,13 +465,8 @@ router.put(
  *       404:
  *         description: Attribute or values not found
  */
-router.post(
-  "/:idOrCode/values/remove-many",
-  asyncHandler(async (req, res) => {
+router.post("/:idOrCode/values/remove-many", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     await controller.removeManyValues(req, res);
-  })
-);
-
+}));
 console.log("Loaded routes in attributes", router.stack.map(r => r.route?.path));
-
-export default router;
+exports.default = router;
