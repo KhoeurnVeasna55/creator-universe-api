@@ -6,8 +6,25 @@ import { Attribute } from "../../attribute/models/attribute.model";
 const isHex24 = (s: unknown) => typeof s === "string" && /^[a-fA-F0-9]{24}$/.test(s);
 const toArray = <T>(v: T | T[]) => (Array.isArray(v) ? v : [v]);
 
+type InputVariantValue = {
+  attributeId: string;
+  attributesValueId: string | string[];
+  stock: number;
+  imageUrl?: string | null;
+};
+
+type InputVariant = {
+  sku?: string;
+  price: number;
+  salePrice?: number;
+  stock: number;
+  imageUrl?: string | null;
+  barcode?: string | null;
+  values: InputVariantValue[];
+};
+
 export class AdminProductController {
-  // ===== LIST (admin; minimal shape) ========================================
+  // ===== LIST ====================
   list = async (req: Request, res: Response) => {
     try {
       const page = Math.max(parseInt(String(req.query.page ?? "1"), 10), 1);
@@ -110,12 +127,26 @@ export class AdminProductController {
     }
   };
 
-  // ===== CREATE (admin; no mainBuild) =======================================
+  // ===== CREATE ======================================================
   create = async (req: Request, res: Response) => {
     try {
-      const payload = req.body;
-
-      // normalize slug
+      const payload = req.body as {
+        title: string;
+        slug?: string;
+        description?: string;
+        brand?: string;
+        category?: string | mongoose.Types.ObjectId | null;
+        mainAttributeId?: string | null;
+        imageUrl: string;
+        price?: number;
+        salePrice?: number;
+        offerStart?: string | Date;
+        offerEnd?: string | Date;
+        currency?: string;
+        stock?: number;
+        variants?: InputVariant[];
+        isActive?: boolean;
+      };
       if (payload.slug) {
         payload.slug = String(payload.slug)
           .toLowerCase()
@@ -123,13 +154,119 @@ export class AdminProductController {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)+/g, "");
       }
-      // normalize category
-      if (payload.category && typeof payload.category === "string" && mongoose.isValidObjectId(payload.category)) {
+      if (typeof payload.category === "string" && mongoose.isValidObjectId(payload.category)) {
         payload.category = new mongoose.Types.ObjectId(payload.category);
+      } else if (payload.category === null) {
+        delete (payload as any).category;
+      }
+      if (!Array.isArray(payload.variants) || payload.variants.length === 0) {
+        if (typeof payload.price !== "number") {
+          return res.status(400).json({ message: "Simple product requires 'price' (number)" });
+        }
+        if (typeof payload.stock !== "number") {
+          return res.status(400).json({ message: "Simple product requires 'stock' (number)" });
+        }
+        const simple = await Product.create(payload);
+        return res.status(201).json(simple);
+      }
+      const variants = payload.variants;
+      if (!variants.every(v => typeof v.price === "number" && typeof v.stock === "number" && Array.isArray(v.values) && v.values.length > 0)) {
+        return res.status(400).json({ message: "Each variant must include price, stock, and non-empty values[]" });
+      }
+      for (const v of variants) {
+        for (const pair of v.values) {
+          if (!isHex24(pair.attributeId)) {
+            return res.status(400).json({ message: `Invalid attributeId '${pair.attributeId}' (expect 24-hex)` });
+          }
+          const ids = toArray(pair.attributesValueId);
+          if (ids.length === 0 || !ids.every(isHex24)) {
+            return res.status(400).json({ message: `attributesValueId must be 24-hex (string or non-empty string[]) for attributeId ${pair.attributeId}` });
+          }
+          if (typeof pair.stock !== "number" || pair.stock < 0) {
+            return res.status(400).json({ message: "values[].stock must be a non-negative number" });
+          }
+          if (pair.imageUrl && typeof pair.imageUrl !== "string") {
+            return res.status(400).json({ message: "values[].imageUrl must be a string if provided" });
+          }
+        }
+      }
+      const allAttrIds = Array.from(new Set(variants.flatMap(v => v.values.map(p => p.attributeId))));
+      const attrs = await Attribute.find({ _id: { $in: allAttrIds } }, { values: 1 }).lean();
+      const foundIds = new Set(attrs.map(a => String(a._id)));
+      const missing = allAttrIds.filter(id => !foundIds.has(id));
+      if (missing.length) return res.status(400).json({ message: "Unknown attributeId(s)", attributeIds: missing });
+
+      // value lookup for validation
+      const valuesByAttr = new Map<string, Set<string>>();
+      for (const a of attrs) {
+        const set = new Set<string>();
+        for (const v of a.values ?? []) set.add(String(v._id));
+        valuesByAttr.set(String(a._id), set);
+      }
+      for (const v of variants) {
+        for (const pair of v.values) {
+          const allowed = valuesByAttr.get(pair.attributeId);
+          if (!allowed) return res.status(400).json({ message: `Attribute not loaded: ${pair.attributeId}` });
+          const vids = toArray(pair.attributesValueId);
+          const bad = vids.filter(vid => !allowed.has(vid));
+          if (bad.length) {
+            return res.status(400).json({
+              message: "attributesValueId contains value(s) not defined on attribute",
+              attributeId: pair.attributeId,
+              missingValueIds: bad
+            });
+          }
+        }
       }
 
-      const product = await Product.create(payload);
-      return res.status(201).json(product);
+      let mainAttributeId: string | null = null;
+      if (allAttrIds.length === 1) {
+        mainAttributeId = allAttrIds[0];
+      } else {
+        if (!payload.mainAttributeId) {
+          return res.status(400).json({
+            message:
+              "Multiple attributes detected across variants. Provide 'mainAttributeId' explicitly."
+          });
+        }
+        if (!isHex24(payload.mainAttributeId)) {
+          return res.status(400).json({ message: "mainAttributeId must be 24-hex" });
+        }
+        if (!allAttrIds.includes(payload.mainAttributeId)) {
+          return res.status(400).json({ message: "mainAttributeId must be used in every variant.values" });
+        }
+        mainAttributeId = payload.mainAttributeId;
+      }
+
+      for (const [idx, v] of variants.entries()) {
+        if (!v.values.some(p => p.attributeId === mainAttributeId)) {
+          return res.status(400).json({ message: `Variant at index ${idx} does not include a pair for mainAttributeId ${mainAttributeId}` });
+        }
+      }
+
+      const cleanedVariants = variants.map(v => ({
+        sku: v.sku,
+        price: v.price,
+        salePrice: v.salePrice,
+        stock: v.stock,
+        imageUrl: v.imageUrl ?? null,
+        barcode: v.barcode ?? null,
+        values: v.values.map(({ attributeId, attributesValueId, stock, imageUrl }) => ({
+          attributeId,
+          attributesValueId,
+          stock,
+          imageUrl: imageUrl ?? null
+        }))
+      }));
+
+      const toSave = {
+        ...payload,
+        mainAttributeId,
+        variants: cleanedVariants
+      };
+
+      const created = await Product.create(toSave);
+      return res.status(201).json(created);
     } catch (err: any) {
       if (err?.code === 11000) {
         return res.status(409).json({ message: "Duplicate slug or unique field" });
@@ -139,19 +276,16 @@ export class AdminProductController {
     }
   };
 
-  // ===== GET ONE (admin; flat with resolved variants) =======================
+  // ===== GET ONE =======================
   getOne = async (req: Request, res: Response) => {
     try {
-      const { idOrSlug } = req.params;
-      const query = /^[a-f\d]{24}$/i.test(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug.toLowerCase() };
+      const { id } = req.params;
 
-      const product = await Product.findOne(query).lean();
+      const product = await Product.findOne({_id: id}).lean();
       if (!product) return res.status(404).json({ message: "Product not found" });
-
-      // Resolve attributes/values so variants are UI-ready
       const attrIdSet = new Set<string>();
       for (const v of product.variants ?? []) {
-        for (const p of v.values ?? []) attrIdSet.add(p.attributeId);
+        for (const p of (v as any).values ?? (v as any).attributesId ?? []) attrIdSet.add(p.attributeId);
       }
       const attrIds = Array.from(attrIdSet);
       const attributes = attrIds.length ? await Attribute.find({ _id: { $in: attrIds } }).lean() : [];
@@ -169,14 +303,15 @@ export class AdminProductController {
       }
 
       const resolvedVariants = (product.variants ?? []).map((v: any) => {
-        const attributesResolved = (v.values ?? []).map((pair: any) => {
+        const pairs = v.values ?? v.attributesId ?? [];
+        const attributesResolved = pairs.map((pair: any) => {
           const attrInfo =
             attrById.get(pair.attributeId) ?? { _id: pair.attributeId, name: null, code: null, type: null, isActive: null };
           const valueIds = toArray(pair.attributesValueId);
           const values = valueIds.map((vid: string) =>
             valByAttrId.get(pair.attributeId)?.get(vid) ?? { _id: vid, label: null, value: null, meta: null }
           );
-        return {
+          return {
             attribute: attrInfo,
             values,
             stock: pair.stock ?? null,
@@ -210,20 +345,21 @@ export class AdminProductController {
     }
   };
 
-  // ===== UPDATE (admin; POST, not PATCH) ====================================
-  update = async (req: Request, res: Response) => {
+  updateById = async (req: Request, res: Response) => {
     try {
-      const { idOrSlug } = req.params;
-      const body = req.body;
+      const body = req.body ?? {};
+      const id: unknown = body.id;
 
-      const query = /^[a-f\d]{24}$/i.test(idOrSlug) ? { _id: idOrSlug } : { slug: idOrSlug.toLowerCase() };
-      const product = await Product.findOne(query);
+      if (typeof id !== "string" || !mongoose.isValidObjectId(id)) {
+        return res.status(400).json({ message: "Valid 'id' (24-hex ObjectId) is required in the request body" });
+      }
+
+      const product = await Product.findById(id);
       if (!product) return res.status(404).json({ message: "Product not found" });
 
       if (typeof body.mainBuild !== "undefined") {
-        return res.status(400).json({ message: "mainBuild is no longer supported in update." });
+        return res.status(400).json({ message: "mainBuild is not supported." });
       }
-
       [
         "title",
         "description",
@@ -240,7 +376,6 @@ export class AdminProductController {
       ].forEach((k) => {
         if (typeof body[k] !== "undefined") (product as any)[k] = body[k];
       });
-
       if (typeof body.slug !== "undefined" && String(body.slug).trim()) {
         product.slug = String(body.slug)
           .toLowerCase()
@@ -248,18 +383,20 @@ export class AdminProductController {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/(^-|-$)+/g, "");
       }
-
       if (typeof body.category !== "undefined") {
         if (body.category && mongoose.isValidObjectId(body.category)) {
           product.category = new mongoose.Types.ObjectId(body.category);
         } else if (body.category === null) {
-          // allow clearing category
           (product as any).category = undefined;
+        } else {
+          return res.status(400).json({ message: "category must be a 24-hex ObjectId or null" });
         }
       }
-
       if (typeof body.variants !== "undefined") {
-        product.variants = body.variants; // full replacement
+        if (!Array.isArray(body.variants)) {
+          return res.status(400).json({ message: "variants must be an array when provided" });
+        }
+        product.variants = body.variants as any;
       }
 
       await product.save();
@@ -268,29 +405,38 @@ export class AdminProductController {
       if (err?.code === 11000) {
         return res.status(409).json({ message: "Duplicate slug or unique field" });
       }
-      console.error("Admin update product error:", err);
+      console.error("Admin update product (by id) error:", err);
       return res.status(500).json({ message: "Failed to update product", details: err?.message });
     }
   };
 
-  // ===== BULK DELETE (admin; POST /delete) ==================================
   bulkDelete = async (req: Request, res: Response) => {
     try {
       const { ids } = req.body as { ids?: string[] };
+
       if (!Array.isArray(ids) || ids.length === 0) {
-        return res.status(400).json({ message: "Body must include non-empty 'ids' array of ObjectId strings" });
+        return res.status(400).json({
+          message: "Body must include non-empty 'ids' array of ObjectId strings",
+        });
       }
-      const validIds = ids.filter(isHex24);
+      const validIds = ids.filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
       if (validIds.length === 0) {
         return res.status(400).json({ message: "No valid 24-hex ids provided" });
       }
-      const result = await Product.deleteMany({ _id: { $in: validIds } });
-      return res.json({ deletedCount: result.deletedCount ?? 0, ids: validIds });
+
+      const objectIds = validIds.map((id) => new mongoose.Types.ObjectId(id));
+      const result = await Product.deleteMany({ _id: { $in: objectIds } });
+
+      return res.json({
+        requested: validIds,
+        deletedCount: result.deletedCount ?? 0,
+      });
     } catch (err) {
       console.error("Admin bulk delete products error:", err);
       return res.status(500).json({ message: "Failed to delete products" });
     }
   };
+
 }
 
 export default AdminProductController;

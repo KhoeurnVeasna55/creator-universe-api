@@ -169,6 +169,23 @@ const controller = new AdminProductController();
  *         - hasVariants
  *         - createdAt
  *         - updatedAt
+ *
+ *     BulkDeleteRequest:
+ *       type: object
+ *       required: [ids]
+ *       properties:
+ *         ids:
+ *           type: array
+ *           minItems: 1
+ *           items: { $ref: '#/components/schemas/ObjectId' }
+ *
+ *     BulkDeleteResponse:
+ *       type: object
+ *       properties:
+ *         deletedCount: { type: integer }
+ *         ids:
+ *           type: array
+ *           items: { $ref: '#/components/schemas/ObjectId' }
  */
 
 /**
@@ -227,12 +244,12 @@ const controller = new AdminProductController();
  *                 pages: { type: integer, example: 10 }
  */
 router.get(
-    "/",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.list(req, res);
-    })
+  "/",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncHandler(async (req, res) => {
+    await controller.list(req, res);
+  })
 );
 
 /**
@@ -240,7 +257,7 @@ router.get(
  * /api/admin/products:
  *   post:
  *     summary: Create a product (admin)
- *     description: Create simple product (no variants) or provide explicit `variants`. `mainBuild` is not supported.
+ *     description: Create simple (no variants) or pass explicit `variants`. When multiple different attributes are used across variants, you **must** set `mainAttributeId`. If only one attribute type is used, the server auto-sets `mainAttributeId`.
  *     tags: [AdminProducts]
  *     security: [ { bearerAuth: [] } ]
  *     requestBody:
@@ -249,6 +266,7 @@ router.get(
  *         application/json:
  *           examples:
  *             simple:
+ *               summary: Simple product (no variants)
  *               value:
  *                 title: "Basic Cotton Tee"
  *                 slug: "basic-cotton-tee"
@@ -258,23 +276,52 @@ router.get(
  *                 price: 12.99
  *                 stock: 120
  *                 isActive: true
- *             variants:
+ *             variants_single_attribute_auto_main:
+ *               summary: Variants (only Size used → main inferred automatically)
+ *               value:
+ *                 title: "Crew Socks"
+ *                 slug: "crew-socks"
+ *                 imageUrl: "https://cdn.example.com/products/crew-socks/main.png"
+ *                 brand: "Acme"
+ *                 currency: "USD"
+ *                 variants:
+ *                   - sku: "SOCKS-S"
+ *                     price: 6.99
+ *                     stock: 30
+ *                     imageUrl: "https://cdn.example.com/products/crew-socks/s.png"
+ *                     values:
+ *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68c506aeda9147540db9b476", "stock": 30 }
+ *                   - sku: "SOCKS-M"
+ *                     price: 6.99
+ *                     stock: 40
+ *                     imageUrl: "https://cdn.example.com/products/crew-socks/m.png"
+ *                     values:
+ *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 40 }
+ *             variants_multi_attribute_requires_main:
+ *               summary: Variants (Size + Color → MUST provide mainAttributeId)
  *               value:
  *                 title: "Premium Crewneck Tee"
  *                 slug: "premium-crewneck-tee"
  *                 imageUrl: "https://cdn.example.com/products/premium-crewneck/main.png"
  *                 brand: "Acme"
  *                 currency: "USD"
- *                 mainAttributeId: "68ba88ce54d06434d762e2b2"
+ *                 mainAttributeId: "68ba88ce54d06434d762e2b2" # Size
  *                 variants:
- *                   - sku: "TEE-PREM-M-BLK"
+ *                   - sku: "TEE-PREM-S-BLK"
  *                     price: 19.99
  *                     salePrice: 17.99
- *                     stock: 25
- *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/m-black.png"
+ *                     stock: 18
+ *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/s-black.png"
  *                     values:
- *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 10 }
- *                       - { "attributeId": "68b9d650e9f857534e61dc7d", "attributesValueId": "68b9d650e9f857534e61dc7e", "stock": 15 }
+ *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68c506aeda9147540db9b476", "stock": 8 }  # Size S
+ *                       - { "attributeId": "68b9d650e9f857534e61dc7d", "attributesValueId": "68b9d650e9f857534e61dc7e", "stock": 10 }   # Color Black
+ *                   - sku: "TEE-PREM-M-RED"
+ *                     price: 19.99
+ *                     stock: 15
+ *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/m-red.png"
+ *                     values:
+ *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 7 }   # Size M
+ *                       - { "attributeId": "68b9d650e9f857534e61dc7d", "attributesValueId": "68c552b6b15a257696f56cd7", "stock": 8 }    # Color Red
  *     responses:
  *       201: { description: Created }
  *       400: { description: Validation error }
@@ -283,25 +330,25 @@ router.get(
  *       409: { description: Duplicate slug }
  */
 router.post(
-    "/",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.create(req, res);
-    })
+  "/",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncHandler(async (req, res) => {
+    await controller.create(req, res);
+  })
 );
 
 /**
  * @swagger
- * /api/admin/products/{idOrSlug}:
+ * /api/admin/products/{id}:
  *   get:
- *     summary: Get a product (admin, flat; resolved variants)
+ *     summary: Get a product by id
  *     description: Flat product with a `variants` array (each variant includes `attributesResolved`).
  *     tags: [AdminProducts]
  *     security: [ { bearerAuth: [] } ]
  *     parameters:
  *       - in: path
- *         name: idOrSlug
+ *         name: id
  *         required: true
  *         schema: { type: string }
  *     responses:
@@ -314,59 +361,140 @@ router.post(
  *       404: { description: Not found }
  */
 router.get(
-    "/:idOrSlug",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.getOne(req, res);
-    })
+  "/:id",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncHandler(async (req, res) => {
+    await controller.getOne(req, res);
+  })
 );
 
 /**
  * @swagger
- * /api/admin/products/{idOrSlug}:
+ * tags:
+ *   name: AdminProducts
+ *   description: Admin-only product management
+ */
+
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     ObjectId:
+ *       type: string
+ *       pattern: "^[a-fA-F0-9]{24}$"
+ *       example: "68ba88ce54d06434d762e2b2"
+ *
+ *     AdminProductUpdateRequest:
+ *       type: object
+ *       required: [id]
+ *       properties:
+ *         id:
+ *           $ref: '#/components/schemas/ObjectId'
+ *         title:        { type: string }
+ *         description:  { type: string, nullable: true }
+ *         brand:        { type: string, nullable: true }
+ *         currency:     { type: string, example: "USD" }
+ *         price:        { type: number, nullable: true }
+ *         salePrice:    { type: number, nullable: true }
+ *         offerStart:   { type: string, format: date-time, nullable: true }
+ *         offerEnd:     { type: string, format: date-time, nullable: true }
+ *         stock:        { type: integer, nullable: true }
+ *         isActive:     { type: boolean }
+ *         imageUrl:     { type: string, format: uri }
+ *         mainAttributeId: { $ref: '#/components/schemas/ObjectId' }
+ *         category:
+ *           oneOf:
+ *             - $ref: '#/components/schemas/ObjectId'
+ *             - type: 'null'
+ *         variants:
+ *           type: array
+ *           description: Full replacement of variants
+ *           items:
+ *             type: object
+ *             properties:
+ *               sku:       { type: string }
+ *               price:     { type: number }
+ *               salePrice: { type: number }
+ *               stock:     { type: integer }
+ *               imageUrl:  { type: string, format: uri, nullable: true }
+ *               barcode:   { type: string, nullable: true }
+ *               values:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     attributeId:       { $ref: '#/components/schemas/ObjectId' }
+ *                     attributesValueId:
+ *                       oneOf:
+ *                         - $ref: '#/components/schemas/ObjectId'
+ *                         - type: array
+ *                           minItems: 1
+ *                           items: { $ref: '#/components/schemas/ObjectId' }
+ *                     stock:    { type: integer }
+ *                     imageUrl: { type: string, format: uri, nullable: true }
+ *
+ * /api/admin/products/update:
  *   post:
- *     summary: Update a product (admin; POST not PATCH)
+ *     summary: Update a product by ID
  *     tags: [AdminProducts]
  *     security: [ { bearerAuth: [] } ]
- *     parameters:
- *       - in: path
- *         name: idOrSlug
- *         required: true
- *         schema: { type: string }
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
- *           example:
- *             title: "Premium Crewneck Tee v2"
- *             salePrice: 17.49
- *             mainAttributeId: "68ba88ce54d06434d762e2b2"
- *             variants:
- *               - sku: "TEE-PREM-M-BLK"
- *                 price: 19.99
+ *           schema: { $ref: '#/components/schemas/AdminProductUpdateRequest' }
+ *           examples:
+ *             update_simple_fields:
+ *               summary: Update top-level fields only
+ *               value:
+ *                 id: "68ba88ce54d06434d762e2b2"
+ *                 title: "Premium Crewneck Tee v2"
  *                 salePrice: 17.49
- *                 stock: 22
- *                 values:
- *                   - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 10 }
- *                   - { "attributeId": "68b9d650e9f857534e61dc7d", "attributesValueId": "68b9d650e9f857534e61dc7e", "stock": 12 }
+ *                 imageUrl: "https://cdn.example.com/products/premium-crewneck/main-v2.png"
+ *                 isActive: true
+ *             replace_variants_and_mainAttribute:
+ *               summary: Replace variants & set main explicitly
+ *               value:
+ *                 id: "68ba88ce54d06434d762e2b2"
+ *                 mainAttributeId: "68ba88ce54d06434d762e2b2"
+ *                 variants:
+ *                   - sku: "TEE-PREM-M-BLK"
+ *                     price: 19.99
+ *                     salePrice: 17.49
+ *                     stock: 22
+ *                     imageUrl: "https://cdn.example.com/products/premium-crewneck/m-black.png"
+ *                     values:
+ *                       - { "attributeId": "68ba88ce54d06434d762e2b2", "attributesValueId": "68ba88ce54d06434d762e2b5", "stock": 10 }
+ *                       - { "attributeId": "68b9d650e9f857534e61dc7d", "attributesValueId": "68b9d650e9f857534e61dc7e", "stock": 12 }
  *     responses:
- *       200: { description: Updated }
- *       404: { description: Not found }
+ *       200:
+ *         description: Updated product
+ *       400:
+ *         description: Validation error / missing id
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Product not found
+ *       409:
+ *         description: Duplicate unique field (e.g., slug)
  */
 router.post(
-    "/:idOrSlug",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.update(req, res);
-    })
+  "/update",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncHandler(async (req, res) => {
+    await controller.updateById(req, res);
+  })
 );
+
 /**
  * @swagger
  * /api/admin/products/delete:
  *   post:
- *     summary: Bulk delete products (admin)
+ *     summary: Bulk delete products
  *     description: Deletes multiple products by `_id`. Provide a non-empty array of ObjectId strings.
  *     tags: [AdminProducts]
  *     security: [ { bearerAuth: [] } ]
@@ -390,37 +518,20 @@ router.post(
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/BulkDeleteResponse'
- *             examples:
- *               ok:
- *                 value:
- *                   deletedCount: 2
- *                   ids:
- *                     - "68c709d4e1e28a7c7730c241"
- *                     - "68c709d4e1e28a7c7730c245"
  *       400:
  *         description: Invalid or empty ids payload
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ErrorResponse'
- *             examples:
- *               empty:
- *                 value: { "message": "Body must include non-empty 'ids' array of ObjectId strings" }
- *               invalid:
- *                 value: { "message": "No valid 24-hex ids provided" }
  *       401:
  *         description: Unauthorized (no/invalid token)
  *       403:
  *         description: Forbidden (not an admin)
  */
 router.post(
-    "/delete",
-    authenticate,
-    authorizeRoles("admin"),
-    asyncHandler(async (req, res) => {
-        await controller.bulkDelete(req, res);
-    })
+  "/delete",
+  authenticate,
+  authorizeRoles("admin"),
+  asyncHandler(async (req, res) => {
+    await controller.bulkDelete(req, res);
+  })
 );
-
 
 export default router;

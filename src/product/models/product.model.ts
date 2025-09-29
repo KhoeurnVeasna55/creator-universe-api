@@ -3,12 +3,11 @@ import { Schema, model, Document, Types } from "mongoose";
 const urlValidator = (v: string) => /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(v);
 const isHex24 = (s: unknown) => typeof s === "string" && /^[a-fA-F0-9]{24}$/.test(s);
 
-// ---------- Variant Value (ids + per-value overrides) ----------
 export interface IVariantValue {
-  attributeId: string;                               // 24-hex string (Attribute._id)
-  attributesValueId: string | string[];              // 24-hex (or array) of Attribute.values[i]._id
-  stock: number;                                     // required
-  imageUrl?: string;                                 // optional (per-value image)
+  attributeId: string;                            
+  attributesValueId: string | string[];
+  stock: number;                                 
+  imageUrl?: string;                                
 }
 
 function validateVariantValue(v: any): v is IVariantValue {
@@ -24,13 +23,12 @@ function validateVariantValue(v: any): v is IVariantValue {
   return true;
 }
 
-// ---------- Variant ----------
 export interface IVariant extends Document {
   sku?: string;
-  price: number;                         // required
+  price: number;                  
   salePrice?: number;
-  values: IVariantValue[];               // required
-  stock: number;                         // required
+  values: IVariantValue[];  
+  stock: number;        
   imageUrl?: string;
   barcode?: string;
 }
@@ -81,7 +79,6 @@ const VariantSchema = new Schema<IVariant>(
   { _id: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// Variant virtuals
 VariantSchema.virtual("effectivePrice").get(function (this: IVariant) {
   if (typeof this.salePrice === "number") return this.salePrice;
   return this.price;
@@ -94,8 +91,6 @@ VariantSchema.virtual("discountPercent").get(function (this: IVariant) {
   }
   return 0;
 });
-
-// ---------- Product ----------
 export interface IProduct extends Document {
   title: string;
   slug: string;
@@ -103,16 +98,16 @@ export interface IProduct extends Document {
   brand?: string;
   category?: Types.ObjectId;
 
-  mainAttributeId?: string;             // required if variants exist
+  mainAttributeId?: string;        
 
-  imageUrl: string;                     // single main image
-  price?: number;                       // required if no variants
+  imageUrl: string;           
+  price?: number;   
   salePrice?: number;
   offerStart?: Date;
   offerEnd?: Date;
 
   currency: string;
-  stock?: number;                       // required if no variants
+  stock?: number;       
   variants: Types.DocumentArray<IVariant>;
 
   isActive: boolean;
@@ -157,12 +152,7 @@ const ProductSchema = new Schema<IProduct>(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// Indices
-ProductSchema.index({ totalStock: 1 });
-ProductSchema.index({ price: 1 });
-ProductSchema.index({ createdAt: -1 });
 
-// Auto-slug if title changed and slug not manually set
 ProductSchema.pre<IProduct>("save", function (next) {
   if (this.isModified("title") && !this.isModified("slug")) {
     this.slug = this.title
@@ -173,7 +163,6 @@ ProductSchema.pre<IProduct>("save", function (next) {
   next();
 });
 
-// Integrity & aggregation
 ProductSchema.pre<IProduct>("validate", function (next) {
   const hasVariants = this.variants && this.variants.length > 0;
 
@@ -196,8 +185,6 @@ ProductSchema.pre<IProduct>("validate", function (next) {
   }
   next();
 });
-
-// Product virtuals
 ProductSchema.virtual("effectivePrice").get(function (this: IProduct) {
   const now = new Date();
   const inWindow = (!this.offerStart || this.offerStart <= now) && (!this.offerEnd || this.offerEnd >= now);

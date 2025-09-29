@@ -201,6 +201,7 @@ export class AttributeController {
       if (!doc) return res.status(404).json({ message: "Attribute not found" });
 
       doc.values.push({
+        _id: String(Schema.Types.ObjectId),
         label: String(label).trim(),
         value: typeof value === "string" ? value.trim() : value,
         meta: meta ?? undefined,
